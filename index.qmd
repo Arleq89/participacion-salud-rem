@@ -434,6 +434,13 @@ res_comp <- tryCatch({
     ifelse(p < 0.01,  "**",
     ifelse(p < 0.05,  "*", "(n.s.)"))))
   }
+  ic_or <- vapply(d$bloque, function(b){
+    md <- gp(b, "modelo_determinantes"); if (is.null(md)) return("")
+    lo <- md[indicador == "IC95_inferior", valor][1]
+    hi <- md[indicador == "IC95_superior", valor][1]
+    if (length(lo) && length(hi) && is.finite(lo) && is.finite(hi))
+      sprintf(" (IC95 %.2f a %.2f)", lo, hi) else ""
+  }, character(1))
   tab <- data.table(
     Sección = paste0(d$bloque, " · ", c("OIRS","Part. social","Satisfacción")),
     `Cobertura %`             = d$cobertura_pct,
@@ -441,7 +448,7 @@ res_comp <- tryCatch({
     `Meses c/registro (med.)` = d$mediana_meses_con_registro,
     `ICC barrera %`           = d$icc_barrera_pct,
     `Var. comuna %`           = d$var_comuna_pct,
-    `OR pobreza (×10pp)`      = paste0(round(d$OR_pobreza_x10pp, 2),
+    `OR pobreza (×10pp)`      = paste0(round(d$OR_pobreza_x10pp, 2), ic_or,
                                        " ", p_stars(d$pobreza_p_valor)))
   note_html <- htmltools::HTML(
     "<div style='font-size:.78rem;color:#6c7a89;margin-top:.4rem;padding:.3rem .6rem'>",
@@ -1083,6 +1090,13 @@ vb(formatC(as.numeric(av("I_dd_partic_x100")), format="f", digits=1),
 #| title: "Comparativo completo de las tres secciones"
 res_comp2 <- tryCatch({
   d <- copy(comp)
+  ic_or2 <- vapply(d$bloque, function(b){
+    md <- gp(b, "modelo_determinantes"); if (is.null(md)) return("")
+    lo <- md[indicador == "IC95_inferior", valor][1]
+    hi <- md[indicador == "IC95_superior", valor][1]
+    if (length(lo) && length(hi) && is.finite(lo) && is.finite(hi))
+      sprintf(" (IC95 %.2f a %.2f)", lo, hi) else ""
+  }, character(1))
   tab <- data.table(
     Sección = paste0(d$bloque, " · ", d$tema),
     `Cobertura %` = d$cobertura_pct, `Eventos` = fmt(d$total_eventos),
@@ -1090,7 +1104,7 @@ res_comp2 <- tryCatch({
     `ICC barrera %` = d$icc_barrera_pct,
     `Var. estab %` = d$var_establecimiento_pct,
     `Var. comuna %` = d$var_comuna_pct,
-    `OR pobreza` = round(d$OR_pobreza_x10pp, 2),
+    `OR pobreza (IC95)` = paste0(round(d$OR_pobreza_x10pp, 2), ic_or2),
     `p` = signif(d$pobreza_p_valor, 2),
     `% mujeres` = d$pct_mujeres)
   if (requireNamespace("DT", quietly = TRUE))
