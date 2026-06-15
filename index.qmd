@@ -1212,6 +1212,93 @@ res_desc <- tryCatch({
 res_desc
 ```
 
+# 2026 en curso {orientation="rows"}
+
+## {.sidebar width="320px" .scrollable}
+
+**Monitoreo del año en curso (preliminar).** El REM 2026 es preliminar e incompleto, por lo que esta página no compara años completos. Mide solo los **meses ya reportados**, compara ese **mismo periodo** contra 2025 y **proyecta** el cierre del año con una banda por el rezago de reporte (en datos preliminares, los meses recientes suelen estar subreportados, no porque haya menos actividad). Las cifras son preliminares y se afinan a medida que el DEIS publica más meses. El método está en `PLAN_METODO_2026.md`.
+
+Si esta página aparece vacía, falta correr el monitoreo: en la consola de R, `Sys.setenv(REM_ANIO="2026")` y luego `source("R/00_descarga.R")`, `source("R/01_procesamiento.R")`, `source("R/11_monitoreo_2026.R")`.
+
+## Row {height="20%"}
+
+```{r}
+#| content: valuebox
+#| title: "Meses disponibles (2026)"
+gm <- function(name){ f <- file.path("productos","monitoreo_2026",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+co <- gm("corte")
+list(icon = "calendar3", color = "secondary",
+     value = if (!is.null(co)) sprintf("%d meses", co$n_meses[1]) else "s/d")
+```
+
+```{r}
+#| content: valuebox
+#| title: "Cobertura OIRS, mismo periodo 2026"
+gm <- function(name){ f <- file.path("productos","monitoreo_2026",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+vp <- gm("variacion_periodo")
+list(icon = "graph-up", color = "primary",
+     value = if (!is.null(vp)) sprintf("%.1f%%", vp[bloque=="A", cobertura_pct_2026][1]) else "s/d")
+```
+
+## Row {.tabset}
+
+```{r}
+#| title: "Mismo periodo: 2026 frente a 2025"
+gm <- function(name){ f <- file.path("productos","monitoreo_2026",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+res_var26 <- tryCatch({
+  vp <- gm("variacion_periodo"); if (is.null(vp)) stop("falta")
+  vp[, Seccion := tema_blq[bloque]]
+  tab <- vp[, .(Seccion,
+    `Cobertura 2025 (%)` = cobertura_pct_2025,
+    `Cobertura 2026 (%)` = cobertura_pct_2026,
+    `Dif. cobertura (pp)` = dif_cobertura_pp,
+    `Var. eventos (%)` = var_eventos_pct)]
+  if (requireNamespace("DT", quietly = TRUE))
+    DT::datatable(tab, rownames = FALSE,
+      options = list(dom="t", ordering=FALSE, scrollX=TRUE), class="stripe compact",
+      caption = "Solo los meses ya reportados de 2026, contra esos mismos meses de 2025.")
+  else knitr::kable(tab)
+}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre el monitoreo 2026 (R/11_monitoreo_2026.R) para ver esta vista.</div>"))
+res_var26
+```
+
+```{r}
+#| title: "Proyección de cierre 2026 (preliminar)"
+gm <- function(name){ f <- file.path("productos","monitoreo_2026",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+res_proj26 <- tryCatch({
+  pj <- gm("proyeccion_cierre"); if (is.null(pj)) stop("falta")
+  pj[, Seccion := tema_blq[bloque]]
+  fmtn <- function(x) prettyNum(round(x), big.mark=".")
+  tab <- pj[, .(Seccion,
+    `Acumulado observado` = fmtn(acumulado_observado),
+    `Proyección base` = fmtn(proyeccion_base),
+    `Con rezago +15%` = fmtn(proyeccion_rezago_15),
+    `Con rezago +30%` = fmtn(proyeccion_rezago_30))]
+  if (requireNamespace("DT", quietly = TRUE))
+    DT::datatable(tab, rownames = FALSE,
+      options = list(dom="t", ordering=FALSE, scrollX=TRUE), class="stripe compact",
+      caption = "Cierre estimado del año. La base asume el perfil estacional de 2025; los escenarios inflan los últimos meses por rezago. Todo preliminar.")
+  else knitr::kable(tab)
+}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre el monitoreo 2026 para ver la proyección.</div>"))
+res_proj26
+```
+
+```{r}
+#| title: "Reporte por mes (chequeo de rezago)"
+gm <- function(name){ f <- file.path("productos","monitoreo_2026",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+res_diag26 <- tryCatch({
+  dm <- gm("diag_meses"); if (is.null(dm)) stop("falta")
+  g <- ggplot(dm, aes(x = factor(Mes), y = eventos,
+        text = paste0("Mes ", Mes, ": ", prettyNum(eventos, big.mark="."), " eventos, ",
+                      estab_activos, " establecimientos"))) +
+    geom_col(fill = col_blq[["A"]]) +
+    labs(x = "Mes de 2026", y = "Eventos de participación registrados") +
+    tg
+  interactivo(g)
+}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre el monitoreo 2026 para ver el diagnóstico por mes.</div>"))
+res_diag26
+```
+
 # Acerca de
 
 ## Row
