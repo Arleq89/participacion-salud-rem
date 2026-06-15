@@ -18,6 +18,7 @@ url: "https://javierverabravo.github.io/participacion-salud-rem/"
 license: MIT
 version: "1.0.0"
 date-released: "2026-06-14"
+doi: "10.5281/zenodo.20706406"
 keywords:
   - "participacion ciudadana en salud"
   - "REM"

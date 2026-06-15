@@ -1,5 +1,7 @@
 # Participación Ciudadana en Salud · REM-A19b Chile
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20706406.svg)](https://doi.org/10.5281/zenodo.20706406)
+
 > Análisis reproducible de la participación ciudadana en la red pública de salud de Chile, a partir de los Resúmenes Estadísticos Mensuales (REM) del DEIS-MINSAL. Todo el procesamiento está en R; el resultado es un tablero web y un informe técnico.
 >
 > **Autor:** Javier Vera Bravo · [@javierverabravo](https://github.com/javierverabravo) · **Datos:** REM 2025 (DEIS-MINSAL).
@@ -246,6 +248,12 @@ El orden mental es: **datos** (`00` a `03`) alimentan el **motor** (`04` a `05`)
 7. **Documenta también los resultados nulos.** Que la dependencia administrativa y el Servicio de Salud no expliquen varianza es un hallazgo, no un fracaso: acota dónde intervenir.
 
 ---
+
+## Cómo citar
+
+Vera Bravo, J. (2026). Participación Ciudadana en Salud: análisis por secciones del REM-A19b (Chile) (v1.0.0). Zenodo. https://doi.org/10.5281/zenodo.20706406
+
+El archivo `CITATION.cff` permite a GitHub mostrar la cita y exportarla en varios formatos.
 
 ## Uso de inteligencia artificial
 
