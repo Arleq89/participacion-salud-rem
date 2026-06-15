@@ -18,7 +18,6 @@
 | 8 | k-means sobre composición (shares) | Tipologías de participación | Aceptable, exploratorio (caveat composicional) | Aitchison 1986; Hartigan y Wong 1979 |
 | 9 | Pobreza comunal por SAE (CASEN) | Covariable contextual | Sólido | Rao y Molina 2015; Casas-Cordero 2016 |
 | 10 | Inferencia múltiple y nivel ecológico | Interpretación de p-valores y covariables | Declarado y acotado | Merlo 2006; Mood 2010 |
-| 11 | Machine learning (xgboost + SHAP) | Triangular importancia y score de riesgo | Complemento predictivo, no causal | Chen y Guestrin 2016; Lundberg y Lee 2017 |
 
 Conclusión general: la metodología es coherente con el estado del arte en análisis multinivel de datos administrativos de salud y en modelos de conteo con exceso de ceros. Los cuatro puntos que un revisor podría cuestionar (la definición del ICC en escala latente, la aproximación de verosimilitud, la comparación de varianzas entre modelos logísticos anidados y el k-means sobre composiciones) están aquí explicitados y, en tres de los cuatro, resueltos a favor de la opción más defendible.
 
@@ -177,20 +176,6 @@ En orden de impacto sobre la solidez percibida:
 5. Mantener la decisión de **Laplace** y su verificación contra el modo rápido como parte explícita de los métodos: es una fortaleza que conviene mostrar.
 
 Con (1) a (3) implementadas o declaradas, los cuatro puntos potencialmente cuestionables quedan cubiertos.
-
----
-
-## 11. Machine learning complementario (xgboost + SHAP): para qué, y sus límites
-
-**Qué hacemos.** Como complemento *predictivo* del núcleo inferencial, entrenamos un gradient boosting (xgboost) que predice, por establecimiento, si registra cada sección a partir de sus características (tipo, nivel, dependencia, Servicio de Salud, región, pobreza comunal, población), sin su identidad. Reportamos la importancia por SHAP y un score de riesgo de subregistro.
-
-**Concepto.** xgboost (Chen y Guestrin, 2016) ajusta un ensamble de árboles de decisión que captura relaciones no lineales e interacciones sin imponer una forma funcional. SHAP (Lundberg y Lee, 2017), basado en los valores de Shapley de la teoría de juegos, reparte cada predicción entre las características de forma aditiva y con garantías de consistencia, lo que da una medida de importancia local y global interpretable.
-
-**Por qué, y qué aporta aquí.** No reemplaza al hurdle ni al multinivel: no entrega partición de varianza ni un contraste causal. Su valor es doble: (1) **triangular** desde un método distinto el hallazgo de que el tipo de establecimiento domina, y revelar interacciones que el modelo lineal podría perderse; (2) producir un **score de riesgo** de subregistro para focalizar intervenciones. La unidad es el establecimiento (una fila por centro), de modo que la validación cruzada k-fold no sufre fuga, y se excluye la identidad del establecimiento para que el modelo aprenda de las características y no memorice centros.
-
-**Supuestos y límite.** Es predictivo, no causal; el AUC mide separación, no mecanismo, y la importancia SHAP es asociativa. Se declara explícitamente como un apéndice complementario del análisis inferencial.
-
-**Veredicto: complemento válido y bien delimitado.**
 
 ---
 
@@ -355,11 +340,6 @@ Estimación de áreas pequeñas y pobreza comunal:
 
 - Rao JNK, Molina I (2015). *Small Area Estimation*, 2.ª ed. Wiley.
 - Casas-Cordero Valencia C, Encina J, Corral P (2016). Poverty mapping for the Chilean comunas. En Pratesi M (ed.), *Analysis of Poverty Data by Small Area Estimation*. Wiley.
-
-Machine learning interpretable:
-
-- Chen T, Guestrin C (2016). XGBoost: a scalable tree boosting system. *Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining*, 785-794.
-- Lundberg SM, Lee SI (2017). A unified approach to interpreting model predictions. *Advances in Neural Information Processing Systems (NeurIPS)* 30, 4765-4774.
 
 Precedente y contexto chileno:
 

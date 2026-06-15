@@ -244,3 +244,9 @@ El orden mental es: **datos** (`00` a `03`) alimentan el **motor** (`04` a `05`)
 5. **Prueba tus hipótesis y acepta cuando el dato las rechaza** (la dependencia administrativa no explicaba nada: bien saberlo).
 6. **Diseña el tablero para quien no es experto.** Doble glosario, tooltips, una sección por lógica propia y guías de lectura al lado de cada página. Si el lector necesita el glosario para entender un gráfico, el gráfico estaba mal explicado.
 7. **Documenta también los resultados nulos.** Que la dependencia administrativa y el Servicio de Salud no expliquen varianza es un hallazgo, no un fracaso: acota dónde intervenir.
+
+---
+
+## Uso de inteligencia artificial
+
+En el desarrollo de este proyecto se utilizo Claude (Anthropic), mediante Claude Cowork, como asistente para la programacion en R, la redaccion y revision de documentos y la auditoria metodologica. El autor definio las preguntas de investigacion, las decisiones metodologicas y las conclusiones, reviso todos los resultados y es el unico responsable del contenido.

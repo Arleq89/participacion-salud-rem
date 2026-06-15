@@ -51,9 +51,10 @@ El A19b reúne tres familias de actividad que miden cosas distintas y se comport
    REM indica que la sección "no presenta regla de consistencia", el subregistro está **habilitado
    por diseño** y es accionable desde el nivel central.
 
-4. **Lo que más se mide no es lo que la norma prioriza.** El volumen está dominado por el reclamo
-   (OIRS, 17,4 M de eventos) frente a la deliberación (B, 250 mil). Muchos establecimientos hacen
-   participación social, pero en volúmenes mínimos frente a la masa de reclamos.
+4. **Lo que más se mide no es lo que la norma prioriza.** El volumen de OIRS (17,4 M de eventos) está
+   dominado por las **consultas**, no por los reclamos (138 mil) ni las felicitaciones (142 mil), y
+   supera con creces a la deliberación (participación social, 250 mil). La participación que el sistema
+   mide no es la que la norma prioriza.
 
 ## Indicadores de auditoría social (nivel nacional)
 
@@ -62,15 +63,16 @@ Con denominador FONASA (beneficiarios por comuna, diciembre 2025; 16,9 millones 
 - **Fricción administrativa (I_fa):** 13,1 reclamos por cada 1.000 inscritos.
 - **Severidad de espera (T_se):** 46,5 % de los reclamos son por tiempos de espera.
 - **Cumplimiento de plazos:** 14,7 % de los reclamos se responden fuera del plazo legal.
-- **Razón felicitaciones/reclamos:** 0,64 (más reclamos que felicitaciones).
+- **Razón felicitaciones/reclamos:** 1,03 (casi paridad entre felicitaciones y reclamos).
 - **Densidad democrática (I_dd):** 10,8 participantes en participación social por cada 100 inscritos.
 - **Cohesión intercultural (I_ci):** 0,86 actividades interculturales por cada 1.000 inscritos.
 
 ## Implicancias para política
 
 - Fijar metas de registro **por establecimiento y tipo**, no por región.
-- Usar los **Servicios de Salud** como unidad de gestión del registro (al considerarlos, la
-  autocorrelación espacial desaparece: lo que parecía "territorio" es gestión de red).
+- Usar los **Servicios de Salud** como unidad de gestión del registro, teniendo presente que la
+  variación territorial se concentra en la **comuna** (gestión municipal): al modelar el Servicio de
+  Salud como nivel jerárquico explica casi nada de la varianza, igual que la región.
 - **Validar la sección de participación social** en el instrumento REM (hoy sin regla de
   consistencia) para reducir el subregistro habilitado por diseño.
 - Atender el sesgo socioeconómico específico de **satisfacción usuaria**: las comunas más pobres

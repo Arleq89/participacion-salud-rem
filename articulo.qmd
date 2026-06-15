@@ -348,6 +348,10 @@ Todo el pipeline se ejecuta con `source("R/10_run_all.R")` y deja las tablas en
 A/B/C · `09` síntesis · `10` maestro. El REM se descarga automáticamente; el archivo FONASA
 se coloca a mano. Dashboard en vivo: <https://javierverabravo.github.io/participacion-salud-rem/>.
 
+# Declaracion sobre el uso de inteligencia artificial {.unnumbered}
+
+En el desarrollo de este proyecto se utilizo Claude (Anthropic), mediante Claude Cowork, como asistente para la programacion en R, la redaccion y revision de documentos y la auditoria metodologica. El autor definio las preguntas de investigacion, las decisiones metodologicas y las conclusiones, reviso todos los resultados y es el unico responsable del contenido.
+
 # Referencias {.unnumbered}
 
 ::: {#refs}
