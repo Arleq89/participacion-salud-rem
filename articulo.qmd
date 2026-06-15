@@ -1,7 +1,7 @@
 ---
 title: "Participación ciudadana en salud en Chile: un análisis por secciones del REM-A19b (2025)"
 subtitle: "Informe técnico con énfasis en la fundamentación metodológica"
-author: "Javier Vera Bravo · Salud Pública, Chile · @javierverabravo"
+author: "Javier Vera Bravo · Salud Pública, Chile · github.com/javierverabravo"
 date: 2026-06-02
 lang: es
 bibliography: references.bib
