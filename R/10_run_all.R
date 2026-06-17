@@ -1,36 +1,38 @@
 # =============================================================================
-# 10_run_all.R  ·  Script maestro: ejecuta TODO el pipeline por bloque en orden
+# 10_run_all.R  ·  Script maestro: ejecuta TODO el pipeline en orden
 # -----------------------------------------------------------------------------
-# Datos (00-03) -> motor (04-05) -> analisis por bloque (06/07/08) -> sintesis (09).
+# Datos (00-03) -> motor (04-05) -> bloques (06/07/08) -> sintesis (09) ->
+# manifiesto, diagnostico, A06 complementario y monitoreo multianual (10-13).
 # Idempotente y parametrizable por ano con la variable de entorno REM_ANIO.
 #
 # Uso (consola de R):  source("R/10_run_all.R")
 # Para otro ano:       Sys.setenv(REM_ANIO = "2026"); source("R/10_run_all.R")
 #
-# OPTIMIZACION (jun 2026):
-#   - Los bloques A/B/C corren EN PARALELO (son independientes). Respaldo
-#     secuencial automatico si el cluster falla, para no perder una corrida.
-#   - Los glmer usan nAGQ = 0 (mucho mas rapido; cambia minimamente la varianza).
-#   - Flags opcionales (variables de entorno):
-#       REM_PAR  = "1" paralelo (def) | "0" secuencial
-#       REM_SENS = "1" corre la sensibilidad participativa (def) | "0" la omite
-#       REM_DEP  = "0" omite dependencia en la descomposicion (def) | "1" la incluye
-#       REM_FAST = "0" glmer exacto nAGQ=1 (def, ~30-40 min) | "1" rapido nAGQ=0 (~4 min, ICC algo menor)
+# Flags opcionales (variables de entorno):
+#   REM_PAR  = "1" bloques en paralelo (def) | "0" secuencial
+#   REM_SENS = "1" corre la sensibilidad participativa (def) | "0" la omite
+#   REM_DEP  = "0" omite dependencia en la descomposicion (def) | "1" la incluye
+#   REM_FAST = "0" glmer exacto nAGQ=1 (def, cifras publicables) | "1" rapido nAGQ=0
+#   REM_A06  = "1" corre el analisis complementario A06 C.1 (def) | "0" lo omite
+#   REM_MON  = "1" corre el monitoreo multianual si aplica (def) | "0" lo omite
+#
+# Los pasos 10-13 van en tryCatch: si falta un insumo (p. ej. otros anos para el
+# monitoreo), se omiten con un aviso y el pipeline no se cae.
 # =============================================================================
 library(here)
 t0 <- Sys.time()
 
-message("== 1/9  Descarga REM + establecimientos ==")
+message("== 1/13  Descarga REM + establecimientos ==")
 source(here("R", "00_descarga.R"))
-message("== 2/9  Procesamiento + crosswalk A19b (bloques A/B/C) ==")
+message("== 2/13  Procesamiento + crosswalk A19b (bloques A/B/C) ==")
 source(here("R", "01_procesamiento.R"))
-message("== 3/9  Determinantes comunales (CASEN 2024) ==")
+message("== 3/13  Determinantes comunales (CASEN 2024) ==")
 source(here("R", "02_datos_comunales.R"))
-message("== 4/9  Denominador FONASA (inscritos validados) ==")
+message("== 4/13  Denominador FONASA (inscritos validados) ==")
 source(here("R", "03_fonasa_inscritos.R"))
-message("== 5/9  Motor de analisis (funciones) ==")
+message("== 5/13  Motor de analisis (funciones) ==")
 source(here("R", "04_engine.R"))
-message("== 6-8/9  Bloques A / B / C ==")
+message("== 6-8/13  Bloques A / B / C ==")
 .runners <- c(here("R", "06_analisis_A.R"),
               here("R", "07_analisis_B.R"),
               here("R", "08_analisis_C.R"))
@@ -67,10 +69,27 @@ if (!isTRUE(.paralelo_ok)) {
   message("  -> bloques en secuencia")
   .correr_secuencial()
 }
-message("== 9/9  Sintesis A/B/C + indicadores de auditoria social ==")
+message("== 9/13  Sintesis A/B/C + indicadores de auditoria social ==")
 source(here("R", "09_sintesis.R"))
 
-message(sprintf("\nPipeline completo en %.1f min. Productos en productos/{A,B,C,sintesis}/.",
+message("== 10/13  Manifiesto de procedencia (huellas de los insumos) ==")
+tryCatch(source(here("R", "manifiesto_datos.R")),
+         error = function(e) message("  manifiesto omitido: ", conditionMessage(e)))
+message("== 11/13  Diagnostico del dato ==")
+tryCatch(source(here("R", "diagnostico_datos.R")),
+         error = function(e) message("  diagnostico omitido: ", conditionMessage(e)))
+message("== 12/13  A06 C.1 (analisis complementario salud mental) ==")
+if (Sys.getenv("REM_A06", unset = "1") == "1")
+  tryCatch(source(here("R", "12_a06_salud_mental.R")),
+           error = function(e) message("  A06 omitido: ", conditionMessage(e)))
+else message("  (omitido por REM_A06=0)")
+message("== 13/13  Monitoreo multianual (si el ano es posterior a la referencia) ==")
+if (Sys.getenv("REM_MON", unset = "1") == "1")
+  tryCatch(source(here("R", "11_monitoreo_2026.R")),
+           error = function(e) message("  monitoreo omitido: ", conditionMessage(e)))
+else message("  (omitido por REM_MON=0)")
+
+message(sprintf("\nPipeline completo en %.1f min. Productos en productos/.",
                 as.numeric(difftime(Sys.time(), t0, units = "mins"))))
 message("Revisa productos/<bloque>/modelo_estado.csv para ver que modelos convergieron.")
 message("Luego, en la terminal:  quarto render")

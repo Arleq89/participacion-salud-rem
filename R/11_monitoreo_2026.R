@@ -22,6 +22,13 @@ suppressPackageStartupMessages({ library(here); library(data.table) })
 anio_ref <- as.integer(Sys.getenv("REM_ANIO_REF", unset = "2025"))
 anio_mon <- as.integer(Sys.getenv("REM_ANIO",     unset = "2026"))
 
+# El monitoreo aplica al ano PRELIMINAR (posterior al de referencia). Si se corre
+# para un ano que no es posterior (p. ej. dentro de run_all del ano de referencia),
+# se omite limpio (run_all lo captura y sigue).
+if (anio_mon <= anio_ref)
+  stop("monitoreo: el ano monitoreado (", anio_mon, ") no es posterior al de referencia (",
+       anio_ref, "); no aplica.")
+
 leer <- function(a, f) {
   p <- here("datos", as.character(a), f)
   if (file.exists(p)) readRDS(p) else NULL
