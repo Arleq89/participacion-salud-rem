@@ -1114,14 +1114,26 @@ res_d_clase
 ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
 res_d_solape <- tryCatch({
   sp <- ga06("solape_a19b_a06"); if (is.null(sp)) stop("falta")
-  sp[, `Participación social A19b` := ifelse(a19_B, "Sí", "No")]
-  sp[, `Trabajo comunitario A06` := ifelse(a06_com, "Sí", "No")]
-  tab <- dcast(sp, `Participación social A19b` ~ `Trabajo comunitario A06`, value.var = "N", fill = 0)
-  if (requireNamespace("DT", quietly = TRUE))
-    DT::datatable(tab, rownames = FALSE,
-      options = list(dom = "t", ordering = FALSE), class = "stripe compact",
-      caption = "Establecimientos por registro A19b (participación social) y A06 (trabajo comunitario en salud mental).")
-  else knitr::kable(tab)
+  sp[, categoria := fcase(
+    a19_B & a06_com,  "Ambos: participación social A19b + trabajo comunitario salud mental A06",
+    a19_B & !a06_com, "Solo participación social A19b",
+    !a19_B & a06_com, "Solo trabajo comunitario en salud mental A06 (el A19b no lo ve)",
+    default = "Ninguno de los dos")]
+  cat <- sp[, .(Establecimientos = sum(N)), by = .(Categoría = categoria)]
+  ord <- c("Ambos: participación social A19b + trabajo comunitario salud mental A06",
+           "Solo participación social A19b",
+           "Solo trabajo comunitario en salud mental A06 (el A19b no lo ve)",
+           "Ninguno de los dos")
+  cat <- cat[match(ord, Categoría)]
+  cat[, destacar := grepl("no lo ve", Categoría)]
+  g <- ggplot(cat, aes(x = factor(Categoría, levels = rev(ord)), y = Establecimientos,
+        fill = destacar, text = paste0(Categoría, ": ", Establecimientos))) +
+    geom_col() + coord_flip() +
+    scale_fill_manual(values = c(`FALSE` = "#9ecae1", `TRUE` = "#1b7837"), guide = "none") +
+    labs(x = NULL, y = "Establecimientos",
+         subtitle = "Cada establecimiento en una sola categoria. En verde, los 181 que el A19b no ve.") +
+    tg
+  interactivo(g)
 }, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre R/12_a06_salud_mental.R.</div>"))
 res_d_solape
 ```
