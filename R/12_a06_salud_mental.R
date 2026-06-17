@@ -44,11 +44,20 @@ message("A06 C.1: ", nrow(cw), " codigos (",
 ruta_serieA <- list.files(here("datos", as.character(anio)),
   pattern = sprintf("SerieA%d\\.csv$", anio), full.names = TRUE, recursive = TRUE)[1]
 serieA <- fread(ruta_serieA, sep = ";", encoding = "UTF-8",
-                select = c("IdEstablecimiento", "CodigoPrestacion", "Col01"),
+                select = c("IdEstablecimiento", "CodigoPrestacion", "IdRegion", "Mes", "Col01"),
                 colClasses = list(character = "CodigoPrestacion"))
+# Region por establecimiento (constante en la Serie A): denominador del semaforo.
+estab_region <- unique(
+  serieA[, .(cod = as.character(IdEstablecimiento),
+             IdRegion = suppressWarnings(as.integer(IdRegion)))], by = "cod")
 a06 <- merge(serieA[CodigoPrestacion %chin% cw$codigo], cw,
              by.x = "CodigoPrestacion", by.y = "codigo", all.x = TRUE)
 a06[, val := suppressWarnings(as.numeric(Col01))]
+# Serie mensual de la participacion comunitaria (insumo de la pagina D).
+serie_a06 <- a06[clase == "Participacion comunitaria" & !is.na(val) & val > 0,
+                 .(eventos = sum(val), establecimientos = uniqueN(IdEstablecimiento)),
+                 by = .(Mes = suppressWarnings(as.integer(Mes)))][order(Mes)]
+fwrite(serie_a06, file.path(dir_out, "serie_a06.csv"), sep = ";", bom = TRUE)
 rm(serieA); gc()
 estab_com <- unique(a06[clase == "Participacion comunitaria" & !is.na(val) & val > 0, IdEstablecimiento])
 estab_a06 <- unique(a06[!is.na(val) & val > 0, IdEstablecimiento])
@@ -73,6 +82,12 @@ d[is.na(tipo) | tipo == "", tipo := "Sin dato"]
 d[, `:=`(a06_com = IdEstablecimiento %in% estab_com,
          a06_any = IdEstablecimiento %in% estab_a06,
          a19_B   = IdEstablecimiento %in% estab_b)]
+# Cobertura comunitaria por region (mismo universo d): columna D del semaforo.
+d <- merge(d, estab_region, by = "cod", all.x = TRUE)
+cob_reg_a06 <- d[!is.na(IdRegion),
+                 .(n = .N, pct = round(100 * mean(a06_com), 1)),
+                 by = IdRegion][order(IdRegion)]
+fwrite(cob_reg_a06, file.path(dir_out, "cobertura_region_a06.csv"), sep = ";", bom = TRUE)
 
 # ---- 5. Productos ----------------------------------------------------------
 fwrite(data.table(

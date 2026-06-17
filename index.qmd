@@ -98,6 +98,20 @@ plot_serie <- function(blq) {
     scale_y_continuous(labels = function(x) format(x, big.mark = ".", scientific = FALSE)) +
     labs(x = "Mes", y = "Eventos registrados") + tg
 }
+plot_serie_a06 <- function() {
+  f <- file.path("productos", "a06", "serie_a06.csv")
+  if (!file.exists(f)) return(NULL)
+  d <- data.table::fread(f, sep = ";", encoding = "UTF-8")
+  if (!"eventos" %in% names(d) || nrow(d) == 0) return(NULL)
+  d <- d[!is.na(Mes)][order(Mes)]
+  ggplot(d, aes(x = Mes, y = eventos, group = 1,
+        text = paste0("Mes ", Mes, ": ", fmt(eventos), " participantes"))) +
+    geom_line(linewidth = 1, color = "#1b7837") +
+    geom_point(size = 1.6, color = "#1b7837") +
+    scale_x_continuous(breaks = 1:12) +
+    scale_y_continuous(labels = function(x) format(x, big.mark = ".", scientific = FALSE)) +
+    labs(x = "Mes", y = "Participantes (trabajo comunitario)") + tg
+}
 plot_var <- function(blq) {
   d <- gp(blq, "modelo_multinivel_var"); if (is.null(d)) return(NULL)
   ggplot(d, aes(x = reorder(nivel, pct_varianza), y = pct_varianza,
@@ -371,7 +385,7 @@ Los recuadros muestran cuántos centros de salud registraron actividad en cada s
 
 En la tabla, los campos más directos son **Cobertura %**, **Subregistro %** y **OR pobreza**: solo en C la pobreza comunal predice menos registro (en comunas con 10 puntos más de pobreza, la probabilidad de registrar satisfacción cae un 42%).
 
-Las pestañas inferiores muestran la **estacionalidad** (baja en enero y febrero, repunte al cierre del año) y el **semáforo regional** (verde = tercio superior de cobertura, rojo = inferior).
+Las pestañas inferiores muestran la **estacionalidad** (baja en enero y febrero, repunte al cierre del año) y el **semáforo regional** (verde = tercio superior de cobertura, rojo = inferior, relativo entre regiones). El semáforo suma una columna **D · salud mental (A06)** como registro distinto: se muestra junto a A/B/C pero no es comparable celda a celda.
 
 <hr class="sidebar-sep"/>
 
@@ -410,6 +424,15 @@ vb(pct(kget("B","pct_cobertura")), "registra participación social (consejos, ca
 vb(pct(kget("C","pct_cobertura")), "registra gestión de satisfacción usuaria",
    def_de("Satisfacción usuaria"), icon = "emoji-smile", color = "warning",
    title = "C · Satisfacción usuaria")
+```
+
+```{r}
+.f <- file.path("productos", "a06", "kpis_a06.csv")
+.k <- if (file.exists(.f)) data.table::fread(.f, sep = ";", encoding = "UTF-8") else NULL
+vb(if (!is.null(.k)) paste0(.k[indicador == "cobertura_a06_c1_comunitaria_pct", valor][1], "%") else "s/d",
+   "registra trabajo comunitario en salud mental (A06, registro distinto)",
+   "Participación comunitaria del programa de salud mental (REM A06, sección C.1): universo e instrumento propios, no comparable celda a celda con A/B/C. Se muestra para no invisibilizarla.",
+   icon = "diagram-3", color = "secondary", title = "D · Salud mental comunitaria")
 ```
 
 ## Row
@@ -493,20 +516,27 @@ res_serie
 ```{r}
 #| title: "Semáforo regional de cobertura"
 res_semaforo <- tryCatch({
-  reg_cob <- rbindlist(lapply(c("A","B","C"), function(b) {
+  base <- rbindlist(lapply(c("A","B","C"), function(b) {
     f <- gp(b, "cobertura_region")
     if (is.null(f) || !all(c("IdRegion","pct") %in% names(f))) return(NULL)
-    f[, bloque := b]
+    f[, .(IdRegion, pct, bloque = b)]
   }))
+  fd <- tryCatch(data.table::fread(file.path("productos","a06","cobertura_region_a06.csv"),
+                                   sep = ";", encoding = "UTF-8"), error = function(e) NULL)
+  if (!is.null(fd) && all(c("IdRegion","pct") %in% names(fd)))
+    base <- rbind(base, fd[, .(IdRegion, pct, bloque = "D")])
+  reg_cob <- base
   if (is.null(reg_cob) || nrow(reg_cob) == 0) stop("sin datos")
   reg_cob[, tercil := cut(pct, breaks = quantile(pct, c(0, 1/3, 2/3, 1), na.rm = TRUE),
                           labels = c("rojo","amarillo","verde"), include.lowest = TRUE),
           by = bloque]
   reg_cob <- merge(reg_cob, reg_nom, by = "IdRegion", all.x = TRUE)
+  lbl  <- c(A = "A · OIRS %", B = "B · Part. social %",
+            C = "C · Satisfacción %", D = "D · Salud mental %")
+  blqs <- intersect(c("A","B","C","D"), unique(reg_cob$bloque))
   wide <- dcast(reg_cob, orden_ns + region ~ bloque, value.var = "pct")
   col_map <- dcast(reg_cob, orden_ns + region ~ bloque, value.var = "tercil")
-  setnames(wide, c("A","B","C"), c("A · OIRS %","B · Part. social %","C · Satisfacción %"))
-  setnames(col_map, c("A","B","C"), c("col_A","col_B","col_C"))
+  setnames(wide, blqs, unname(lbl[blqs]))
   wide <- wide[order(orden_ns)][, orden_ns := NULL]
   col_map <- col_map[order(orden_ns)][, orden_ns := NULL][, region := NULL]
   setnames(wide, "region", "Región")
@@ -515,10 +545,11 @@ res_semaforo <- tryCatch({
   if (requireNamespace("DT", quietly = TRUE)) {
     dt_obj <- DT::datatable(wide, rownames = FALSE,
       options = list(dom = "t", ordering = FALSE, pageLength = 16, scrollX = TRUE),
-      class = "stripe compact")
-    for (col_i in seq_len(3)) {
-      col_name <- names(wide)[col_i + 1]
-      clr_vec  <- col_fn(col_map[[col_i]])
+      class = "stripe compact",
+      caption = "Color por tercil de cobertura ENTRE regiones: rojo = tercio mas bajo, amarillo = medio, verde = mas alto. Es relativo entre regiones, no un umbral fijo. La columna D (salud mental, A06) es un registro distinto, no comparable celda a celda con A/B/C.")
+    for (b in blqs) {
+      col_name <- unname(lbl[b])
+      clr_vec  <- col_fn(col_map[[b]])
       dt_obj <- DT::formatStyle(dt_obj, col_name,
                   backgroundColor = DT::styleEqual(wide[[col_name]], clr_vec),
                   color = "white", fontWeight = "600")
@@ -924,6 +955,11 @@ interactivo(tryCatch(plot_eq_subseccion("B"), error = function(e) NULL))
 ## Row {.tabset}
 
 ```{r}
+#| title: "Serie mensual"
+interactivo(plot_serie("B"))
+```
+
+```{r}
 #| title: "Pueblos originarios y migrantes por región"
 interactivo(plot_eq_region("B"))
 ```
@@ -955,7 +991,7 @@ interactivo(tryCatch(plot_genero_div("B"), error = function(e) NULL))
 
 **La sección más débil del A19b**: solo el **`r pct(kget("C","pct_cobertura"))`** de los centros la registra, con mediana de **`r comp[bloque=="C", mediana_meses_con_registro]`** meses de registro: puntual, no rutinario.
 
-**Hallazgo de equidad crítico**: es la única sección donde la pobreza comunal predice el registro. En comunas con 10 puntos más de pobreza, la probabilidad de registrar satisfacción cae un 42% (OR `r round(comp[bloque=="C", OR_pobreza_x10pp],2)`, p<0,001). El gráfico de dispersión lo muestra: cada punto es una comuna, la línea baja a la derecha.
+**Hallazgo de equidad crítico**: es la única sección donde la pobreza comunal predice el registro. En comunas con 10 puntos más de pobreza, la probabilidad de registrar satisfacción cae un 42% (OR `r round(comp[bloque=="C", OR_pobreza_x10pp],2)`, p<0,001). El gráfico de dispersión lo muestra: cada punto es una comuna, la línea baja a la derecha. Las personas que más necesitan el sistema son también las que quedan menos visibles en sus datos.
 
 **C.1 vs C.2**: C.2 (líneas de acción) es más inclusiva con pueblos originarios y migrantes.
 
@@ -991,12 +1027,6 @@ vb(pct(kget("C","pct_mujeres","equidad_kpis")),
 
 ## Row
 
-::: {.callout-equidad}
-**Hallazgo de equidad:** en comunas con 10 puntos más de pobreza, la probabilidad de registrar satisfacción usuaria cae un **42%** (OR `r round(comp[bloque=="C", OR_pobreza_x10pp], 2)`, p<0,001). Es la **única sección** del A19b donde la pobreza comunal predice el subregistro. Las personas que más necesitan el sistema son también las que quedan menos visibles en sus datos.
-:::
-
-## Row
-
 ### Column
 ```{r}
 #| title: "Cobertura vs. pobreza comunal: aquí la pobreza SÍ predice"
@@ -1009,6 +1039,11 @@ interactivo(tryCatch(plot_eq_subseccion("C"), error = function(e) NULL))
 ```
 
 ## Row {.tabset}
+
+```{r}
+#| title: "Serie mensual"
+interactivo(plot_serie("C"))
+```
 
 ```{r}
 #| title: "Cobertura por región"
@@ -1066,6 +1101,11 @@ list(icon = "eye-slash", color = "secondary",
 ```
 
 ## Row {.tabset}
+
+```{r}
+#| title: "Serie mensual"
+interactivo(plot_serie_a06())
+```
 
 ```{r}
 #| title: "Por tipo: A06 comunitaria vs A19b participación social"
@@ -1148,6 +1188,7 @@ Esta página reúne los **indicadores per cápita** (por inscritos FONASA, compa
 - **`r formatC(as.numeric(av("I_fa_reclamos_x1000")), format="f", digits=1)` reclamos por 1.000 inscritos** al año: cuánto reclama formalmente la ciudadanía.
 - **`r formatC(as.numeric(av("T_se_pct")), format="f", digits=1)`% de los reclamos** son por tiempos de espera.
 - **`r formatC(as.numeric(av("I_dd_partic_x100")), format="f", digits=1)` participantes por 100 inscritos**: densidad democrática.
+- **Registro distinto (A06):** parte del trabajo comunitario en salud mental queda fuera del A19b; se resume abajo y se detalla en la página **D**.
 
 Estos valores 2025 son la **línea base** para comparar con años siguientes. No hay meta normativa fijada.
 
@@ -1221,6 +1262,25 @@ res_comp2 <- tryCatch({
   else knitr::kable(tab)
 }, error = function(e) htmltools::HTML("Corre R/10_run_all.R."))
 res_comp2
+```
+
+## Row {height="22%"}
+
+```{r}
+#| title: "D · Participación comunitaria en salud mental (A06, registro distinto)"
+ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+res_sint_d <- tryCatch({
+  k  <- ga06("kpis_a06"); rv <- ga06("revela")
+  if (is.null(k) || is.null(rv)) stop("falta")
+  cob <- k[indicador == "cobertura_a06_c1_comunitaria_pct", valor][1]
+  sin <- rv[indicador == "estab_sin_participacion_social_A19b", valor][1]
+  con <- rv[indicador == "de_ellos_con_A06_comunitaria", valor][1]
+  pp  <- rv[indicador == "pct_revela", valor][1]
+  htmltools::HTML(sprintf(
+    "<div style='padding:.5rem .9rem;line-height:1.55'>El REM <strong>A06</strong> es un <strong>registro distinto</strong> del A19b (programa de salud mental, no participación ciudadana general): por eso no entra en el comparativo de arriba, su universo e instrumento son propios. El <strong>%s%%</strong> de la red registra trabajo comunitario en salud mental. Y revela participación que el A19b no ve: de <strong>%s</strong> establecimientos sin participación social en el A19b, <strong>%s (%s%%)</strong> sí hacen trabajo comunitario en salud mental. El detalle está en la página <strong>D</strong>.</div>",
+    cob, sin, con, pp))
+}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre R/12_a06_salud_mental.R para ver el resumen A06.</div>"))
+res_sint_d
 ```
 
 ## Row {.tabset}
