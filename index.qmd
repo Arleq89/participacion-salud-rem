@@ -1313,6 +1313,30 @@ res_diag26 <- tryCatch({
 res_diag26
 ```
 
+```{r}
+#| title: "Trayectoria multianual (A y B, codigos comparables)"
+gm <- function(name){ f <- file.path("productos","monitoreo_2026",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+res_tend <- tryCatch({
+  td <- gm("tendencia_multianual"); if (is.null(td)) stop("falta")
+  yrs <- sub("eventos_", "", grep("^eventos_", names(td), value = TRUE))
+  long <- rbindlist(lapply(yrs, function(y)
+    td[, .(bloque, serie = y, eventos = as.numeric(get(paste0("eventos_", y))))]))
+  long <- rbind(long, td[, .(bloque, serie = paste0(max(as.integer(yrs)) + 1L, " proy."),
+                             eventos = as.numeric(proyeccion_mon_comun))])
+  long[, tema := tema_blq[bloque]]
+  g <- ggplot(long, aes(x = serie, y = eventos, fill = bloque,
+        text = paste0(tema, " ", serie, ": ", prettyNum(round(eventos), big.mark = ".")))) +
+    geom_col() +
+    facet_wrap(~ tema, scales = "free_y") +
+    scale_fill_manual(values = col_blq, guide = "none") +
+    labs(x = NULL, y = "Eventos (codigos comunes 2024 y 2025)",
+         subtitle = "Solo codigos comparables entre anos. B crece fuerte desde una base baja.") +
+    tg
+  interactivo(g)
+}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre el monitoreo 2026 con 2024 procesado (R/11_monitoreo_2026.R) para ver la trayectoria multianual.</div>"))
+res_tend
+```
+
 # Acerca de
 
 ## Row
