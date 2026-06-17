@@ -118,6 +118,55 @@ fwrite(proj[, .(bloque, acumulado_observado, share_acumulado_ref,
                 proyeccion_base, proyeccion_rezago_15, proyeccion_rezago_30)],
        file.path(dir_out, "proyeccion_cierre.csv"), sep = ";", bom = TRUE)
 
+# ---- 5. Trayectoria multianual: incorporar el ano previo (solo A y B) ------
+# El ano previo (por defecto, anio_ref - 1) tiene MENOS detalle: solo bloques A y B
+# y un subconjunto de codigos. Para que sea comparable, todo lo multianual se hace
+# sobre los CODIGOS COMUNES a ambos anos. Da una segunda referencia estacional y una
+# senal de tendencia interanual. Degrada si el ano previo no esta procesado.
+anio_prev <- as.integer(Sys.getenv("REM_ANIO_PREV", unset = as.character(anio_ref - 1L)))
+part_prev <- leer(anio_prev, "participacion_A19b.rds")
+if (!is.null(part_prev)) {
+  setDT(part_prev)
+  filas <- list()
+  for (blq in c("A", "B")) {
+    comun <- intersect(unique(part_prev[bloque == blq, CodigoPrestacion]),
+                       unique(part_ref [bloque == blq, CodigoPrestacion]))
+    if (length(comun) == 0) next
+    sm <- function(pp) {
+      d <- pp[bloque == blq & CodigoPrestacion %chin% comun,
+              .(ev = sum(valor_total, na.rm = TRUE)), by = Mes]
+      d[, share := ev / max(sum(ev), 1)]; d[, .(Mes, share)]
+    }
+    sp <- sm(part_prev); setnames(sp, "share", "s_prev")
+    sr <- sm(part_ref);  setnames(sr, "share", "s_ref")
+    sa <- merge(sp, sr, by = "Mes", all = TRUE)
+    sa[is.na(s_prev), s_prev := 0]; sa[is.na(s_ref), s_ref := 0]
+    sa[, share := (s_prev + s_ref) / 2]
+    S_corte <- sa[Mes <= corte, sum(share)]
+    ev_prev <- part_prev[bloque == blq & CodigoPrestacion %chin% comun, sum(valor_total, na.rm = TRUE)]
+    ev_refy <- part_ref [bloque == blq & CodigoPrestacion %chin% comun, sum(valor_total, na.rm = TRUE)]
+    ev_monc <- part_mon [bloque == blq & CodigoPrestacion %chin% comun & Mes <= corte,
+                         sum(valor_total, na.rm = TRUE)]
+    filas[[blq]] <- data.table(
+      bloque = blq, n_codigos_comunes = length(comun),
+      eventos_prev = ev_prev, eventos_ref = ev_refy,
+      var_interanual_pct = round(100 * (ev_refy - ev_prev) / max(ev_prev, 1), 1),
+      acumulado_mon_comun = ev_monc,
+      proyeccion_mon_comun = round(ev_monc / max(S_corte, 1e-9)))
+  }
+  if (length(filas)) {
+    ten <- rbindlist(filas)
+    setnames(ten, c("eventos_prev", "eventos_ref"),
+             c(paste0("eventos_", anio_prev), paste0("eventos_", anio_ref)))
+    fwrite(ten, file.path(dir_out, "tendencia_multianual.csv"), sep = ";", bom = TRUE)
+    message("Trayectoria multianual (", anio_prev, " y ", anio_ref,
+            ", codigos comunes, bloques A y B) en tendencia_multianual.csv.")
+  }
+} else {
+  message("Ano previo ", anio_prev, " no procesado; se omite la vista multianual ",
+          "(corre 00 y 01 con REM_ANIO=", anio_prev, " para incluirlo).")
+}
+
 message("Monitoreo ", anio_mon, " escrito en productos/monitoreo_", anio_mon, "/ ",
         "(corte.csv, diag_meses.csv, comparacion_periodo.csv, variacion_periodo.csv, proyeccion_cierre.csv).")
 message("REVISA diag_meses.csv: si el ultimo mes cae mucho, el rezago es fuerte y la proyeccion realista esta entre _rezago_15 y _rezago_30.")
