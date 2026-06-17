@@ -499,6 +499,11 @@ res_serie <- tryCatch({
     s <- gp(b, "serie_mensual"); if (is.null(s)) return(NULL)
     s[, .(eventos = sum(eventos)), by = Mes][, `:=`(bloque = b, tema = tema_blq[[b]])]
   }))
+  sd <- tryCatch(data.table::fread(file.path("productos","a06","serie_a06.csv"),
+                                   sep = ";", encoding = "UTF-8"), error = function(e) NULL)
+  if (!is.null(sd) && "eventos" %in% names(sd) && nrow(sd) > 0)
+    sa <- rbind(sa, sd[!is.na(Mes), .(Mes, eventos, bloque = "D",
+                tema = "Salud mental comunitaria (A06)")], fill = TRUE)
   sa[, panel := paste0(bloque, " · ", tema)]
   g <- ggplot(sa, aes(x = Mes, y = eventos, color = bloque, group = bloque,
         text = paste0(tema, " · mes ", Mes, ": ", fmt(eventos)))) +
@@ -506,7 +511,7 @@ res_serie <- tryCatch({
     facet_wrap(~ panel, scales = "free_y", ncol = 1) +
     scale_x_continuous(breaks = c(1,4,7,10)) +
     scale_y_continuous(labels = function(x) format(x, big.mark = ".", scientific = FALSE)) +
-    scale_color_manual(values = col_blq, guide = "none") +
+    scale_color_manual(values = c(unlist(col_blq), D = "#1b7837"), guide = "none") +
     labs(x = "Mes", y = NULL) + tg + theme(strip.text = element_text(face = "bold", size = 9))
   interactivo(g)
 }, error = function(e) htmltools::HTML("Corre el pipeline para ver las series."))
@@ -1188,7 +1193,7 @@ Esta página reúne los **indicadores per cápita** (por inscritos FONASA, compa
 - **`r formatC(as.numeric(av("I_fa_reclamos_x1000")), format="f", digits=1)` reclamos por 1.000 inscritos** al año: cuánto reclama formalmente la ciudadanía.
 - **`r formatC(as.numeric(av("T_se_pct")), format="f", digits=1)`% de los reclamos** son por tiempos de espera.
 - **`r formatC(as.numeric(av("I_dd_partic_x100")), format="f", digits=1)` participantes por 100 inscritos**: densidad democrática.
-- **Registro distinto (A06):** parte del trabajo comunitario en salud mental queda fuera del A19b; se resume abajo y se detalla en la página **D**.
+- **Registro distinto (A06):** parte del trabajo comunitario en salud mental queda fuera del A19b; aparece en el comparativo (solo cobertura y volumen, por ser registro distinto) y se detalla en la página **D**.
 
 Estos valores 2025 son la **línea base** para comparar con años siguientes. No hay meta normativa fijada.
 
@@ -1256,31 +1261,27 @@ res_comp2 <- tryCatch({
     `OR pobreza (IC95)` = paste0(round(d$OR_pobreza_x10pp, 2), ic_or2),
     `p` = signif(d$pobreza_p_valor, 2),
     `% mujeres` = d$pct_mujeres)
+  drow <- tryCatch({
+    g6 <- function(n){ f <- file.path("productos","a06",paste0(n,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+    k <- g6("kpis_a06"); cl <- g6("clase_a06"); if (is.null(k)) stop("falta")
+    cobd <- k[indicador == "cobertura_a06_c1_comunitaria_pct", valor][1]
+    evd  <- if (!is.null(cl)) cl[clase == "Participacion comunitaria", participantes][1] else NA_real_
+    data.table(`Sección` = "D · Salud mental comunitaria (A06, registro distinto)",
+               `Cobertura %` = as.numeric(cobd), `Eventos` = if (is.na(evd)) "" else fmt(evd),
+               `Subregistro %` = NA_real_, `ICC barrera %` = NA_real_,
+               `Var. estab %` = NA_real_, `Var. comuna %` = NA_real_,
+               `OR pobreza (IC95)` = "", `p` = NA_real_, `% mujeres` = NA_real_)
+  }, error = function(e) NULL)
+  if (!is.null(drow)) tab <- rbind(tab, drow, fill = TRUE)
+  cap <- if (!is.null(drow)) htmltools::tags$caption(
+           style = "caption-side:bottom;font-size:.76rem;color:#6c7a89;padding:.3rem .2rem",
+           "D (A06) es un registro distinto: solo se reportan su cobertura y volumen comunitario. Las columnas de modelo (subregistro, ICC, varianzas, pobreza) son del A19b y no le aplican.") else NULL
   if (requireNamespace("DT", quietly = TRUE))
-    DT::datatable(tab, rownames = FALSE,
+    DT::datatable(tab, rownames = FALSE, caption = cap,
       options = list(dom = "t", ordering = FALSE, scrollX = TRUE), class = "stripe compact")
   else knitr::kable(tab)
 }, error = function(e) htmltools::HTML("Corre R/10_run_all.R."))
 res_comp2
-```
-
-## Row {height="22%"}
-
-```{r}
-#| title: "D · Participación comunitaria en salud mental (A06, registro distinto)"
-ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
-res_sint_d <- tryCatch({
-  k  <- ga06("kpis_a06"); rv <- ga06("revela")
-  if (is.null(k) || is.null(rv)) stop("falta")
-  cob <- k[indicador == "cobertura_a06_c1_comunitaria_pct", valor][1]
-  sin <- rv[indicador == "estab_sin_participacion_social_A19b", valor][1]
-  con <- rv[indicador == "de_ellos_con_A06_comunitaria", valor][1]
-  pp  <- rv[indicador == "pct_revela", valor][1]
-  htmltools::HTML(sprintf(
-    "<div style='padding:.5rem .9rem;line-height:1.55'>El REM <strong>A06</strong> es un <strong>registro distinto</strong> del A19b (programa de salud mental, no participación ciudadana general): por eso no entra en el comparativo de arriba, su universo e instrumento son propios. El <strong>%s%%</strong> de la red registra trabajo comunitario en salud mental. Y revela participación que el A19b no ve: de <strong>%s</strong> establecimientos sin participación social en el A19b, <strong>%s (%s%%)</strong> sí hacen trabajo comunitario en salud mental. El detalle está en la página <strong>D</strong>.</div>",
-    cob, sin, con, pp))
-}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre R/12_a06_salud_mental.R para ver el resumen A06.</div>"))
-res_sint_d
 ```
 
 ## Row {.tabset}
