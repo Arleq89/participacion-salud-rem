@@ -20,7 +20,15 @@ library(data.table)
 anio <- as.integer(Sys.getenv("REM_ANIO", unset = "2025"))
 
 # ---- 1. Crosswalk de prestaciones (desde el diccionario A19b) ---------------
-ruta_dicc <- here("Diccionarios", "DICCIONARIO CODIGOS SA_25_V1.5.xlsm")
+# Diccionario A19b del ano correspondiente. OJO: el instrumento 2024 registra
+# MENOS detalle que 2025 (menos prestaciones y columnas); las comparaciones finas
+# entre anos (subsecciones, equidad) no son del todo comparables, solo el nivel de
+# bloque (cobertura, eventos). El crosswalk de columnas es curado de 2025.
+ruta_dicc <- list.files(here("Diccionarios"),
+  pattern = sprintf("SA_%02d.*[.]xlsm$", anio %% 100), full.names = TRUE)[1]
+if (is.na(ruta_dicc))
+  ruta_dicc <- here("Diccionarios", "DICCIONARIO CODIGOS SA_25_V1.5.xlsm")
+message("Diccionario A19b: ", basename(ruta_dicc))
 crudo <- as.data.table(read_excel(ruta_dicc, sheet = "A19b",
                                   col_names = FALSE, col_types = "text"))
 colA <- crudo[[1]]; colB <- crudo[[2]]
@@ -126,7 +134,13 @@ message("Establecimientos cruzados: ",
 
 # ---- 5. Validaciones del dato listo (aserciones que fallan ruidosamente) -----
 # El pipeline debe DETENERSE si una llave o un join se degrada, no seguir callado.
-stopifnot("Crosswalk A19b vacio o incompleto" = nrow(crosswalk) >= 50)
+# Un crosswalk vacio indica un fallo de parseo del diccionario y debe detener.
+# Un crosswalk pequeno NO es error: los anos con menos detalle del instrumento
+# (por ejemplo 2024) traen menos codigos. Corte duro bajo; lo demas, aviso.
+stopifnot("Crosswalk A19b vacio (fallo de parseo del diccionario)" = nrow(crosswalk) >= 5)
+if (nrow(crosswalk) < 50)
+  message("Aviso: crosswalk con ", nrow(crosswalk),
+          " codigos; esperable en anos con menos detalle del instrumento (p. ej. 2024).")
 stopifnot("Universo con llaves (estab x mes) duplicadas" =
           !any(duplicated(universo[, .(IdEstablecimiento, Mes)])))
 stopifnot("Lookup de establecimientos con codigo duplicado" =
@@ -138,14 +152,16 @@ if (match_estab < 0.70)
 if (match_estab < 0.95)
   warning(sprintf("Cruce con base maestra bajo lo esperado (%.1f%%).", 100 * match_estab))
 
-# Verificacion del supuesto valor_total = Col01: en cada seccion, la columna que
-# el crosswalk marca como total (ambos sexos) debe ser efectivamente Col01.
-col_total <- cw_col[dimension == "total" & grepl("ambos sexos", etiqueta, ignore.case = TRUE),
-                    .(seccion_key, col)]
-no_col01 <- col_total[col != "Col01"]
-if (nrow(no_col01) > 0)
-  warning("En estas secciones el total NO es Col01 (revisa valor_total): ",
-          paste(no_col01$seccion_key, collapse = ", "))
+# Verificacion del supuesto valor_total = Col01: Col01 debe ser la columna de TOTAL
+# o conteo principal de cada seccion. En A es el total de participantes; en B y C es
+# el total de actividades (B.1, C.1) o de sesiones (B.2, C.2). El conteo de
+# participantes ("Total Ambos Sexos") vive en otra columna en B y C y se usa solo para
+# equidad, no para el volumen del bloque.
+col01_dim <- cw_col[col == "Col01", .(seccion_key, dimension)]
+no_total <- col01_dim[dimension != "total"]
+if (nrow(no_total) > 0)
+  warning("Col01 no es columna de total en: ",
+          paste(no_total$seccion_key, collapse = ", "), " (revisar valor_total).")
 
 # ---- 6. Diccionario del dato analitico listo (se versiona) -------------------
 diccionario <- data.table(

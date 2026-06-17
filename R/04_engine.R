@@ -31,21 +31,14 @@ suppressPackageStartupMessages({
 # con REM_FAST=1; la corrida final/publicada se deja en exacto (def).
 .nagq <- function() if (Sys.getenv("REM_FAST", unset = "0") == "1") 0L else 1L
 
-# --- C: incertidumbre de las componentes de varianza -------------------------
-# isSingular: marca ajustes de borde (alguna varianza ~ 0; frecuente en region).
+# --- Chequeo de ajuste singular (varianza de borde ~ 0; frecuente en region) --
+# Las componentes de varianza (ICC, % por nivel, MOR) se reportan como estimaciones
+# puntuales por maxima verosimilitud (Laplace). No se computa su IC por bootstrap:
+# en estos modelos de 3 niveles con ~3.000 establecimientos es prohibitivo, y es
+# practica estandar reportar el punto con el chequeo de singularidad. La
+# incertidumbre de los EFECTOS (OR) si se reporta con IC (modelo_determinantes,
+# modelo_tipo_or).
 .es_singular <- function(m) tryCatch(isTRUE(lme4::isSingular(m)), error = function(e) NA)
-# IC por bootstrap parametrico de una cantidad derivada (ICC, MOR, % varianza).
-# CARO: solo corre con REM_CI="1" (nsim con REM_CI_NSIM, def 200). Si no, NA.
-# Nota: ICC y MOR son CONDICIONALES a los efectos fijos del modelo.
-.boot_ci <- function(m, fun, nsim = NULL) {
-  if (Sys.getenv("REM_CI", unset = "0") != "1") return(c(NA_real_, NA_real_))
-  nsim <- if (is.null(nsim)) as.integer(Sys.getenv("REM_CI_NSIM", unset = "200")) else nsim
-  tryCatch({
-    bb <- lme4::bootMer(m, fun, nsim = nsim, type = "parametric",
-                        use.u = FALSE, .progress = "none")
-    as.numeric(stats::quantile(bb$t[, 1], c(0.025, 0.975), na.rm = TRUE))
-  }, error = function(e) c(NA_real_, NA_real_))
-}
 
 # ---- utilitarios -----------------------------------------------------------
 
@@ -489,17 +482,13 @@ modelo_hurdle <- function(panel, blq, dirb) {
   # MOR (median odds ratio): traduce la varianza de establecimiento a escala OR.
   mor <- exp(sqrt(2 * vb) * qnorm(0.75))
   sing_b <- .es_singular(m_b)
-  # IC por bootstrap (solo REM_CI=1). ICC y MOR son CONDICIONALES a los efectos
-  # fijos (region, tipo, mes): varianza de establecimiento no explicada por ellos.
-  icc_ci <- .boot_ci(m_b, function(fm) { v <- as.numeric(VarCorr(fm)$IdEstablecimiento); 100 * v / (v + pi^2 / 3) })
-  mor_ci <- .boot_ci(m_b, function(fm) { v <- as.numeric(VarCorr(fm)$IdEstablecimiento); exp(sqrt(2 * v) * qnorm(0.75)) })
+  # ICC y MOR son CONDICIONALES a los efectos fijos (region, tipo, mes): miden la
+  # varianza de establecimiento no explicada por esas covariables. Estimacion
+  # puntual (sin IC por bootstrap; ver nota en la cabecera del motor).
   fwrite(data.table(
     indicador = c("icc_barrera_pct", "icc_intensidad_pct", "MOR_establecimiento",
-                  "icc_barrera_ic95_inf", "icc_barrera_ic95_sup",
-                  "MOR_ic95_inf", "MOR_ic95_sup", "ajuste_singular_barrera"),
+                  "ajuste_singular_barrera"),
     valor = c(round(100 * icc_b, 1), round(100 * icc_i, 1), round(mor, 2),
-              round(icc_ci[1], 1), round(icc_ci[2], 1),
-              round(mor_ci[1], 2), round(mor_ci[2], 2),
               ifelse(isTRUE(sing_b), 1, ifelse(is.na(sing_b), NA, 0)))),
     file.path(dirb, "modelo_icc.csv"), sep = ";", bom = TRUE)
   if (isTRUE(sing_b)) .estado(dirb, "hurdle_barrera", "singular", "ajuste de borde: varianza ~ 0")
@@ -567,19 +556,11 @@ modelo_multinivel <- function(panel, com, est, part, blq, dirb) {
   v_res <- pi^2 / 3
   tot <- v_est + v_com + v_reg + v_res
   sing_m <- .es_singular(m)
-  # IC por bootstrap (REM_CI=1) del % de varianza de establecimiento y comuna.
-  .pct_ci <- function(sel) .boot_ci(m, function(fm) {
-    v <- as.data.frame(VarCorr(fm))
-    e  <- sum(v$vcov[grepl("IdEstablecimiento", v$grp)])
-    c2 <- sum(v$vcov[grepl("IdComuna", v$grp) & !grepl("IdEstablecimiento", v$grp)])
-    r2 <- sum(v$vcov[v$grp == "IdRegion"]); num <- if (sel == "est") e else c2
-    100 * num / (e + c2 + r2 + pi^2 / 3) })
-  est_ci <- .pct_ci("est"); com_ci <- .pct_ci("com")
+  # Particion de varianza (VPC) condicional a los efectos fijos. Estimacion
+  # puntual; sin IC por bootstrap (ver nota en la cabecera del motor).
   fwrite(data.table(
     nivel = c("Establecimiento", "Comuna", "Región", "Residual (mes a mes)"),
     pct_varianza = round(100 * c(v_est, v_com, v_reg, v_res) / tot, 1),
-    ic95_inf = c(round(est_ci[1], 1), round(com_ci[1], 1), NA, NA),
-    ic95_sup = c(round(est_ci[2], 1), round(com_ci[2], 1), NA, NA),
     ajuste_singular = c(ifelse(isTRUE(sing_m), 1, ifelse(is.na(sing_m), NA, 0)), NA, NA, NA)),
     file.path(dirb, "modelo_multinivel_var.csv"), sep = ";", bom = TRUE)
   if (isTRUE(sing_m)) .estado(dirb, "multinivel", "singular", "ajuste de borde: varianza de region ~ 0 (esperable)")
