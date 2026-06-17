@@ -63,6 +63,25 @@ cobertura institucional subestimaria la actividad comunitaria real en ciertos ti
 establecimiento), pero como un resultado **sobre la relacion entre dos registros**, no
 redefiniendo el constructo. Eso es riguroso, reversible y potencialmente un aporte.
 
+## Resultado empirico (REM 2025)
+
+El analisis (R/12_a06_salud_mental.R) confirma que el A06 capta participacion
+comunitaria que el A19b no registra:
+
+- Cobertura A06 C.1 comunitaria: 30,8% de la red; total C.1: 42,6%. Cobertura de
+  participacion social A19b (bloque B): 51,0%.
+- De los 1.462 establecimientos que NO registran participacion social en el A19b, 181
+  (12,4%) si registran trabajo comunitario en salud mental (A06 C.1): el A19b se pierde
+  a 1 de cada 8.
+- El patron es nitido por tipo: los Centros Comunitarios de Salud Mental (COSAM)
+  registran 71,6% de trabajo comunitario A06 pero solo 13,7% de participacion social
+  A19b; lo mismo en centros de salud mental, hospitales de dia y centros de apoyo a la
+  demencia. Su participacion comunitaria vive en el registro de salud mental, no en el A19b.
+
+Lectura: el A19b subestima la participacion comunitaria de los establecimientos
+orientados a salud mental. Se reporta como relacion entre dos registros, no como
+redefinicion del constructo. Productos en productos/a06/.
+
 ## Referencias
 
 Verificadas en esta revision (jun 2026); confirmar autoria/paginacion antes de un uso

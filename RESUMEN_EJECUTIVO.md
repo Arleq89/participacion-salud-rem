@@ -1,4 +1,4 @@
-# Participación ciudadana en salud (REM-A19b 2025), Resumen ejecutivo
+# Participación ciudadana en salud (REM-A19b), Resumen ejecutivo
 
 **Autor:** Javier Vera Bravo · Salud Pública, Chile ([@javierverabravo](https://github.com/javierverabravo))
 **Dashboard:** https://javierverabravo.github.io/participacion-salud-rem/ · **Repo:** https://github.com/javierverabravo/participacion-salud-rem
@@ -77,6 +77,9 @@ Con denominador FONASA (beneficiarios por comuna, diciembre 2025; 16,9 millones 
   consistencia) para reducir el subregistro habilitado por diseño.
 - Atender el sesgo socioeconómico específico de **satisfacción usuaria**: las comunas más pobres
   registran menos.
+- Considerar que el A19b **no ve toda la participación comunitaria**: un análisis complementario del
+  programa de salud mental (REM A06, C.1) muestra que de los establecimientos sin participación social
+  A19b, cerca del 12 % sí hacen trabajo comunitario en salud mental (en COSAM, ≈72 % vs ≈14 % del A19b).
 
 ## Cómo se llega a estas conclusiones (reproducible)
 

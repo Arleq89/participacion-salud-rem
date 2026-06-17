@@ -1,157 +1,139 @@
-# PROYECTO.md, Brief de continuidad (handoff)
+# Documentacion tecnica del proyecto
 
-> Documento para retomar el proyecto en una nueva sesión de Cowork. Resume qué
-> es, qué está hecho, las decisiones clave y el trabajo pendiente. **Para
-> continuar, abre una sesión nueva en esta misma carpeta y escribe:**
-> *"Lee PROYECTO.md y README.md y continuemos desde el backlog."*
+Resumen del proyecto: que es, las decisiones metodologicas clave, los hallazgos
+principales, como reproducirlo y el trabajo pendiente.
 
-## 1. Qué es
+## 1. Que es
 
-Análisis estadístico reproducible de la **participación ciudadana en salud** en
-Chile, usando los Resúmenes Estadísticos Mensuales (REM 2025) del DEIS-MINSAL.
-El A19b tiene tres familias de actividad distintas; se analizan **sección por
-sección** (bloques A, B y C) con un motor reutilizable, y se sintetizan en
-indicadores de **auditoría social** con denominador poblacional.
+Analisis estadistico reproducible de la **participacion ciudadana en salud** en
+Chile, a partir de los Resumenes Estadisticos Mensuales (REM 2025) del DEIS-MINSAL.
+La seccion A19b reune tres familias de actividad distintas; se analizan **seccion
+por seccion** (bloques A, B y C) con un motor reutilizable, y se sintetizan en
+indicadores de **auditoria social** con denominador poblacional.
 
-- Repo: https://github.com/javierverabravo/participacion-salud-rem
-- Dashboard: https://javierverabravo.github.io/participacion-salud-rem/
+- Repositorio: https://github.com/javierverabravo/participacion-salud-rem
+- Tablero: https://javierverabravo.github.io/participacion-salud-rem/
 
-**Tesis:** la decisión de registrar es un rasgo **institucional** (del
-establecimiento) en las tres secciones, pero el **territorio y la pobreza no
-pesan igual**: son más relevantes en OIRS y, sobre todo, en satisfacción usuaria.
+**Tesis:** la decision de registrar es un rasgo **institucional** (del
+establecimiento) en las tres secciones, pero el **territorio y la pobreza no pesan
+igual**: son mas relevantes en OIRS y, sobre todo, en satisfaccion usuaria.
 
 ---
 
-## 2. Estado actual, pipeline por bloques (jun 2026)
+## 2. Pipeline
 
-El pipeline se **reformuló completamente** respecto a la versión global previa.
-Ahora analiza la A19b **sección por sección** (bloques A / B / C) con un motor
-de funciones reutilizable, agrega datos CASEN 2024 y un denominador FONASA, y
-produce indicadores de auditoría social.
+El pipeline analiza la A19b seccion por seccion (bloques A / B / C) con un motor de
+funciones reutilizable, agrega CASEN 2024 y un denominador FONASA, produce
+indicadores de auditoria social, y suma analisis complementarios (procedencia,
+diagnostico, A06 salud mental y monitoreo del ano en curso).
 
-### Scripts activos (`R/`)
+### Scripts (`R/`)
 
 ```
-00_descarga.R         Descarga REM 2025 + base maestra de establecimientos
-01_procesamiento.R    Crosswalk A19b, bloques A/B/C; tabla larga; universo estab×mes
-02_datos_comunales.R  Pobreza comunal CASEN 2024 (ingresos + multidim., SAE, lector robusto)
-03_fonasa_inscritos.R Población inscrita validada FONASA (lector flexible; degrada con NA si falta)
-04_engine.R           Motor reutilizable por bloque: panel, KPIs, cobertura, serie, equidad,
-                      subsecciones, hurdle mixto (glmer+lmer), multinivel 3 niveles, espacial,
-                      tipologías k-means. tryCatch + modelo_estado.csv por convergencia.
-05_indicadores.R      Indicadores de auditoría social (I_fa, T_se, I_dd, I_ci + extras)
-06_analisis_A.R       Bloque A · OIRS (45 códigos; runners del motor)
-07_analisis_B.R       Bloque B · Participación social B.1+B.2 (26 códigos)
-08_analisis_C.R       Bloque C · Satisfacción usuaria C.1+C.2 (22 códigos)
-09_sintesis.R         Comparativo A/B/C + tipologías cross-tema + auditoría social
-10_run_all.R          Maestro: ejecuta 00 a 09 en orden (datos, motor, bloques, sintesis)
-exploratorio/         Scripts de la fase global previa (archivados, no en el pipeline)
+00_descarga.R          Descarga REM del ano + base maestra de establecimientos
+01_procesamiento.R     Crosswalk A19b (diccionario del ano), bloques A/B/C, tabla larga,
+                       universo estab x mes, validaciones y diccionario del dato
+02_datos_comunales.R   Pobreza comunal CASEN 2024 (ingresos + multidim., SAE)
+03_fonasa_inscritos.R  Denominador poblacional FONASA (lector flexible; degrada con NA)
+04_engine.R            Motor por bloque: panel, KPIs, cobertura, serie, equidad,
+                       subsecciones, hurdle mixto (glmer+lmer), multinivel 3 niveles,
+                       espacial, tipologias. tryCatch + modelo_estado.csv; isSingular.
+05_indicadores.R       Indicadores de auditoria social (I_fa, T_se, I_dd, I_ci + extras)
+06/07/08_analisis_*.R  Corren el motor sobre A / B / C
+09_sintesis.R          Comparativo A/B/C, tipologias cross-tema, territorio, indicadores
+10_run_all.R           Maestro: ejecuta 00 a 09 + pasos complementarios 10 a 13
+manifiesto_datos.R     Manifiesto de procedencia (huellas sha256 de los insumos)
+diagnostico_datos.R    Caracterizacion empirica del dato (exceso de ceros, sobredispersion)
+12_a06_salud_mental.R  Complementario: A06 C.1 (coordinacion comunitaria en salud mental)
+                       y su solape con la participacion A19b (ver EVALUACION_A06.md)
+11_monitoreo_2026.R    Monitoreo multianual del ano preliminar: comparacion del mismo
+                       periodo, proyeccion de cierre y trayectoria 2024-2025-2026 (A y B)
+exploratorio/          Scripts de fases previas (archivados)
 ```
 
-Productos en `productos/{A,B,C,sintesis}/` (generados por 10_run_all.R; ignorados
-por git localmente; el dashboard renderizado en `docs/` sí se versiona).
+`10_run_all.R` ejecuta 00 a 09 y luego, en `tryCatch`, los pasos 10 a 13 (manifiesto,
+diagnostico, A06 y monitoreo); si falta un insumo, ese paso se omite con aviso sin
+abortar. Flags: `REM_PAR`, `REM_SENS`, `REM_DEP`, `REM_FAST`, `REM_A06`, `REM_MON`.
+
+Los productos quedan en `productos/` (no se versionan; el tablero en `docs/` si).
 
 ---
 
-## 3. Decisiones técnicas clave (no repetir errores)
+## 3. Decisiones tecnicas clave
 
-- **Codificación CSV = UTF-8 con BOM** (no Latin-1). Leer con `data.table::fread`,
+- **Codificacion CSV = UTF-8 con BOM** (no Latin-1). Lectura con `data.table::fread`,
   separador `;`, `CodigoPrestacion` como texto.
-- **El subregistro está en filas ausentes**, no en NA. No colapsar NA a 0.
-  El panel completo (estab × mes) se reconstruye en `01_procesamiento.R`.
-- **Modelo hurdle, descomposición en dos partes separadas** (`glmer` logística
-  para barrera + `lmer` log-lineal para intensidad positiva). `glmmTMB` con
-  NB-truncada de objeto único **no converge** por la cola extrema (miles vs.
-  medianas de pocas unidades). Siempre verificar convergencia: NaN, SE gigantes,
-  dispersión ≈ 0.
-- **Motor parametrizado** (`04_engine.R`): las funciones reciben `blq` ("A","B","C")
-  y usan `tryCatch`; si un modelo no converge escribe el motivo en
-  `productos/<bloque>/modelo_estado.csv` y el pipeline continúa.
-- **Edit/Write en el mount Windows** puede corromper archivos grandes (artefacto
-  de sincronización). Preferir `Write` completo y verificar con `Read`, no con bash.
-- **Crosswalk de columnas** (`crosswalk/crosswalk_columnas_A19b.csv`) es insumo
-  curado a mano; SÍ se versiona (no se regenera). Los productos NO se versionan
-  localmente (se regeneran corriendo el pipeline).
-- **CASEN 2024 comunal** disponible y auto-descargable desde el Observatorio Social
-  (URLs en `02_datos_comunales.R`). Reemplaza CASEN 2020.
-- **FONASA inscritos**: URL inestable (portal JS). Colocar el archivo manualmente
-  en `datos/externos/poblacion_inscrita_fonasa.csv`; el script `03` lo detecta
-  automáticamente. Sin el archivo, usa población CASEN como proxy.
+- **El subregistro esta en filas ausentes**, no en NA. No se colapsan los NA a 0. El
+  panel completo (establecimiento x mes) se reconstruye en `01_procesamiento.R`.
+- **valor_total = Col01** es el conteo principal de cada seccion (en A, participantes;
+  en B y C, actividades o sesiones). El total de participantes "ambos sexos" de B y C
+  vive en otra columna y se usa solo para equidad.
+- **Modelo hurdle, descomposicion en dos partes** (`glmer` logistica para la barrera +
+  `lmer` log-lineal para la intensidad). El `glmmTMB` de objeto unico no converge por la
+  cola extrema. Se verifica convergencia y singularidad (isSingular).
+- **Componentes de varianza (ICC, % por nivel, MOR): estimacion puntual.** Su IC por
+  bootstrap es prohibitivo a esta escala; la incertidumbre de los efectos (OR) si se
+  reporta con IC.
+- **CASEN 2024** se auto-descarga; **FONASA** se coloca a mano (portal sin URL estable).
 
 ---
 
-## 4. Hallazgos principales (versión por bloques)
+## 4. Hallazgos principales
 
-| Indicador | A · OIRS | B · Part. social | C · Satisfacción |
+| Indicador | A, OIRS | B, Part. social | C, Satisfaccion |
 |---|---:|---:|---:|
 | Cobertura (% estab.) | 49,9 % | 51,1 % | 24,4 % |
 | Subregistro (% estab-mes) | 60,4 % | 71,7 % | 91,6 % |
-| Mediana de meses con registro | 12 | 7 | 3 |
 | ICC barrera (peso del establecimiento) | 93,9 % | 65,8 % | 74,3 % |
 | Varianza nivel comuna | 29,1 % | 17,5 % | 4,1 % |
 | OR pobreza (+10 pp) | 0,59 (ns) | 0,85 (ns) | **0,58 (p<0,001)** |
-| I de Moran (espacial) | 0,109 (p≈0) | 0,049 (ns) | 0,119 (p<0,001) |
-| Mujeres entre participantes | 61,5 % | 66,5 % | 68,7 % |
 
-- **Lo institucional manda en las tres** (ICC de la barrera 66 a 94 %): registrar
-  depende del establecimiento, no del territorio.
-- **El territorio NO pesa igual:** B (participación social) es el caso institucional
-  puro (sin geografía, pobreza ns); A (OIRS) tiene geografía real (comuna 29 %,
-  Moran significativo); C (satisfacción) es la **única** donde la **pobreza comunal
-  predice** el registro (OR 0,58; p<0,001) y hay clústeres espaciales.
-- **El subregistro crece de A a C** (60, 72, 92 %) y está en **filas ausentes**,
-  no en celdas vacías.
-- **Auditoría social (nacional):** fricción administrativa 13,13 reclamos/1.000;
-  46,5 % de reclamos por espera; 14,7 % fuera de plazo; razón felicitaciones/
-  reclamos 1,03; densidad democrática 10,81 participantes/100; cohesión intercultural
-  0,858/1.000. (Denominador: FONASA, beneficiarios por comuna dic-2025.)
+- Lo institucional domina en las tres secciones (ICC de la barrera 66 a 94 %).
+- El territorio no pesa igual: B es institucional puro; A tiene componente comunal;
+  C es la unica donde la pobreza comunal predice el registro.
+- El subregistro crece de A a C y se aloja en filas ausentes.
+- **A06 complementario:** de los establecimientos sin participacion social A19b, cerca
+  del 12 % si hacen trabajo comunitario en salud mental (A06 C.1). El A19b se pierde esa
+  actividad; se reporta como relacion entre dos registros, no redefiniendo el constructo.
+- **Monitoreo multianual:** A (OIRS) plano 2024-2026; B (participacion social) en alza
+  sostenida (fuerte crecimiento 2024 a 2025, proyeccion al alza en 2026, sobre codigos
+  comparables).
 
 ---
 
-## 5. Cómo reproducir (paso a paso)
+## 5. Como reproducir
 
-Cualquiera que clone el repo y tenga R + Quarto puede llegar a las mismas
-conclusiones:
+Con el repositorio clonado y R mas Quarto instalados:
 
-1. Abrir la carpeta del proyecto en R/Positron.
-2. En la consola de R: `source("R/10_run_all.R")`, descarga los datos del DEIS,
-   construye el crosswalk A19b, agrega CASEN/FONASA, corre el motor sobre A/B/C y
-   genera la síntesis. Deja todo en `productos/{A,B,C,sintesis}/` (~70 min).
-3. (Opcional, per cápita real) Colocar `datos/externos/poblacion_inscrita_fonasa.csv`
-   y re-correr `03` + `09`.
-4. En la terminal: `quarto render`, genera el dashboard en `docs/`.
-5. `git add -A && git commit -m "..." && git push`, publica en GitHub Pages.
-
-El orden y las dependencias están en `R/10_run_all.R`. El esquema de numeración es
-por grupos: **00 a 03** datos, **04 a 05** motor e indicadores, **06 a 08** análisis por bloque,
-**09** síntesis, **10** maestro.
-
----
-
-## 6. Backlog
-
-- [x] Reformulación por bloques A/B/C (motor + runners + síntesis).
-- [x] CASEN 2024, denominador FONASA, indicadores de auditoría social.
-- [x] **Dashboard `index.qmd` reconstruido por bloque** (lee `productos/{A,B,C,sintesis}/`;
-  páginas A/B/C + Síntesis + Metodología + Glosario). *Pendiente: renderizar con
-  `quarto render` y revisar visualmente.*
-- [x] Denominador FONASA: se usa `Beneficiarios 2025.csv` (beneficiarios por comuna,
-  dic-2025; subida manual). Indicadores ahora por inscrito (16,9 M, 98% comunas).
-- [ ] Publicar/actualizar GitHub Pages tras el render (proceso manual; sin Actions).
-- [ ] (Mejora) Ingreso municipal SINIM para probar "capacidad" de gestión directa.
+1. Reconstruir el entorno: `renv::restore()` (una sola vez; ver ENTORNO.md).
+2. **Corrida normal (ano del dashboard):**
+   `Sys.setenv(REM_ANIO = "2025"); source("R/10_run_all.R")`.
+   Hace datos, motor, bloques, sintesis, manifiesto, diagnostico y A06; el monitoreo
+   se omite (2025 no es posterior a la referencia). Corrida exacta del orden de 60 a 70
+   minutos.
+3. **Corrida multi-ano (para el monitoreo):** una vez por ano, **terminando con el ano
+   principal**, para que los archivos compartidos (productos, crosswalk, lookup) queden
+   en ese ano. El monitoreo se genera en la corrida del ano preliminar y persiste
+   (esta namespaced por ano):
+   ```r
+   Sys.setenv(REM_ANIO = "2024"); source("R/10_run_all.R")   # datos 2024
+   Sys.setenv(REM_ANIO = "2026"); source("R/10_run_all.R")   # corre el monitoreo
+   Sys.setenv(REM_ANIO = "2025"); source("R/10_run_all.R")   # deja todo en 2025
+   ```
+4. En la terminal: `quarto render` (tablero en `docs/`) y `quarto render articulo.qmd`.
 
 ---
 
-## 7. Notas de la sesión (jun 2026 · revisión de flujo)
+## 6. Pendientes
 
-- Se reconstruyó el dashboard a la estructura por bloques (antes leía los productos
-  planos de la versión global, que ya no se generan).
-- **El índice de git se corrompió** (`index file corrupt`, artefacto del mount). Se
-  arregla en la terminal del usuario: borrar `.git/index` y `git reset` (reconstruye
-  desde HEAD sin perder commits ni archivos).
-- **Mount Windows E::** desde el sandbox no se puede `rm`/`mv` ni borrar archivos, y
-  la herramienta Write puede dejar bytes nulos al final. Método fiable: escribir a un
-  temporal y `cat tmp > destino` por bash (verificado sin NULs). La limpieza de
-  archivos (borrar/mover) la hace el usuario.
-- Productos planos de la versión global quedan en `_archivo_pipeline_global/` (por
-  mover por el usuario); no afectan al repo (gitignored).
+- **Namespacing de productos por ano.** Hoy `productos/`, el crosswalk de prestaciones y
+  el lookup de establecimientos se regeneran y se sobrescriben entre anos; por eso la
+  corrida multi-ano usa la receta de "ano principal al final". El arreglo de raiz es
+  separar esos artefactos por ano (subcarpetas), para que el multi-ano sea de un solo
+  paso. Refactor mediano.
+- **Analisis complementario A06** (en curso): integrar el hallazgo de solape al tablero y
+  al articulo como relacion entre dos registros.
+- **Intervalos de las componentes de varianza** (opcional): bootstrap costoso; hoy se
+  reportan como estimacion puntual con chequeo de singularidad.
+- Activar o actualizar GitHub Pages tras el render.
+- (Mejora) Ingreso municipal (SINIM) para evaluar la hipotesis de capacidad de gestion.

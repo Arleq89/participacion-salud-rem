@@ -1,5 +1,5 @@
 ---
-title: "Participación Ciudadana en Salud · REM-A19b Chile 2025"
+title: "Participación Ciudadana en Salud · REM-A19b Chile"
 author: "Javier Vera Bravo · @javierverabravo"
 format:
   dashboard:
@@ -1224,6 +1224,33 @@ res_desc <- tryCatch({
   else knitr::kable(tab)
 }, error = function(e) htmltools::HTML("Corre el pipeline."))
 res_desc
+```
+
+```{r}
+#| title: "Participación invisible: salud mental (A06)"
+ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+res_a06 <- tryCatch({
+  rev <- ga06("revela"); pt <- ga06("cobertura_por_tipo")
+  if (is.null(rev) || is.null(pt)) stop("falta")
+  pt <- pt[n >= 20]; pt[, brecha := cob_a06_com_pct - cob_a19_B_pct]
+  top <- pt[order(-brecha)][seq_len(min(6, .N))]
+  m <- melt(top[, .(tipo, `A06 comunitaria (salud mental)` = cob_a06_com_pct,
+                    `A19b participacion social` = cob_a19_B_pct)],
+            id.vars = "tipo", variable.name = "registro", value.name = "cob")
+  nrev <- rev[indicador == "de_ellos_con_A06_comunitaria", valor][1]
+  ntot <- rev[indicador == "estab_sin_participacion_social_A19b", valor][1]
+  g <- ggplot(m, aes(x = reorder(tipo, cob), y = cob, fill = registro,
+        text = paste0(tipo, ", ", registro, ": ", cob, "%"))) +
+    geom_col(position = "dodge") + coord_flip() +
+    scale_y_continuous(labels = function(x) paste0(x, "%")) +
+    scale_fill_manual(values = c("#2c7fb8", "#9ecae1"), name = NULL) +
+    labs(x = NULL, y = "Cobertura (%)",
+         subtitle = sprintf("De %s establecimientos sin participacion social A19b, %s si hacen trabajo comunitario en salud mental (A06 C.1)",
+                            ntot, nrev)) +
+    tg + theme(legend.position = "bottom")
+  interactivo(g)
+}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre R/12_a06_salud_mental.R para ver el analisis complementario A06 (relacion entre dos registros, no redefine el constructo).</div>"))
+res_a06
 ```
 
 # 2026 en curso {orientation="rows"}

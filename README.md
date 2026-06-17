@@ -4,7 +4,7 @@
 
 > Análisis reproducible de la participación ciudadana en la red pública de salud de Chile, a partir de los Resúmenes Estadísticos Mensuales (REM) del DEIS-MINSAL. Todo el procesamiento está en R; el resultado es un tablero web y un informe técnico.
 >
-> **Autor:** Javier Vera Bravo · [@javierverabravo](https://github.com/javierverabravo) · **Datos:** REM 2025 (DEIS-MINSAL).
+> **Autor:** Javier Vera Bravo · [@javierverabravo](https://github.com/javierverabravo) · **Datos:** REM del DEIS-MINSAL (análisis 2025, con referencia 2024 y monitoreo del año en curso).
 >
 > 📊 **Dashboard en vivo:** <https://javierverabravo.github.io/participacion-salud-rem/>
 
@@ -117,6 +117,8 @@ Las piezas encajan en una conclusión coherente: **la participación es un fenó
 - **OIRS no es "reclamos".** Dominan abrumadoramente las **consultas** (16,8 millones) frente a reclamos (138 mil) y felicitaciones (142 mil). La razón felicitaciones/reclamos real es ≈ 1,03. Presentar A como "reclamos" distorsiona; cada tipo de solicitud se entiende en su propia escala.
 - **Las líneas de acción son más inclusivas que las instancias.** En equidad por subsección, B.2 y C.2 registran mucha más participación de pueblos originarios y migrantes (8 % y ~5 %) que B.1 y C.1 (~2 % y ~1 %). La inclusión étnica/migrante vive en una subsección concreta.
 - **La participación social está inflada por TICs y un cajón de sastre.** Dos categorías que no son deliberación, "Uso de TICs y/o Redes Sociales" (un canal de comunicación) y "Otras Instancias" (inespecífica), suman cerca del **74 %** de las actividades de B.1. El núcleo deliberativo real (consejos, cabildos, CDL, COSOC, indígena, jóvenes) es la minoría, de modo que la cobertura de cabecera sobreestima la deliberación efectiva. El análisis separa ambas: cobertura total (51,1 %) frente a cobertura del núcleo deliberativo, que alcanza 1.331 establecimientos (44,6 % de la red).
+
+- **El A19b no ve toda la participación comunitaria.** Un análisis complementario de la sección de coordinación comunitaria del programa de salud mental (REM A06, C.1) muestra que, de los establecimientos que no registran participación social en el A19b, cerca del 12 % sí hacen trabajo comunitario en salud mental; en los Centros Comunitarios de Salud Mental (COSAM) ese trabajo (≈72 %) es casi invisible al A19b (≈14 %). Es una relación entre dos registros, no una redefinición del constructo (ver `EVALUACION_A06.md`).
 
 **Implicancias de política:** fijar metas de registro **por establecimiento y tipo**, no por región; usar los **Servicios de Salud** como unidad de mejora; **validar la sección de participación social** en el instrumento (hoy sin regla de consistencia, lo que habilita subregistro); **separar el registro deliberativo del canal informativo (TICs)** para no sobreestimar la participación; y atender el **sesgo socioeconómico específico de satisfacción usuaria**.
 

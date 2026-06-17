@@ -1,5 +1,5 @@
 ---
-title: "Participación ciudadana en salud en Chile: un análisis por secciones del REM-A19b (2025)"
+title: "Participación ciudadana en salud en Chile: un análisis por secciones del REM-A19b"
 subtitle: "Informe técnico con énfasis en la fundamentación metodológica"
 author: "Javier Vera Bravo · Salud Pública, Chile · github.com/javierverabravo"
 date: 2026-06-02
@@ -313,6 +313,10 @@ if (!is.null(a)) {
   kt(out)
 }
 ```
+
+## Participación comunitaria invisible al A19b (análisis complementario)
+
+El A19b no captura toda la participación comunitaria. Un análisis complementario de la sección de coordinación comunitaria del programa de salud mental (REM A06, sección C.1) muestra que, de los 1.462 establecimientos sin participación social registrada en el A19b, 181 (12,4 %) sí registran trabajo comunitario en salud mental. El caso más claro son los Centros Comunitarios de Salud Mental (COSAM): su trabajo comunitario es mayoritario (71,6 %) pero casi no aparece en el A19b (13,7 %), y algo similar ocurre en centros de salud mental, hospitales de día y centros de apoyo a la demencia. Se reporta como relación entre dos registros, no como redefinición del constructo de participación; el detalle está en la evaluación de constructo del A06 y los productos se generan con `R/12_a06_salud_mental.R`.
 
 # Discusión
 
