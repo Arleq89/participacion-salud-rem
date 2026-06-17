@@ -95,6 +95,12 @@ fwrite(d[, .(n = .N, cob_a06_com_pct = round(100 * mean(a06_com), 1),
              cob_a19_B_pct = round(100 * mean(a19_B), 1)), by = tipo][order(-n)],
        file.path(dir_out, "cobertura_por_tipo.csv"), sep = ";", bom = TRUE)
 
+# Desglose por clase: participacion comunitaria vs coordinacion intersectorial.
+clase_tab <- a06[!is.na(val) & val > 0,
+                 .(establecimientos = uniqueN(IdEstablecimiento), participantes = sum(val)),
+                 by = clase][order(-establecimientos)]
+fwrite(clase_tab, file.path(dir_out, "clase_a06.csv"), sep = ";", bom = TRUE)
+
 message("A06 complementario escrito en productos/a06/.")
 message(sprintf("REVELA: de %d establecimientos SIN participacion social A19b, %d (%.1f%%) si hacen trabajo comunitario A06 C.1.",
                 nrow(no_b), sum(no_b$a06_com), 100 * mean(no_b$a06_com)))

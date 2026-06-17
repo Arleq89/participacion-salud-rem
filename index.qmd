@@ -1030,6 +1030,102 @@ interactivo(tryCatch(plot_sexo_bin("C"), error = function(e) NULL))
 interactivo(tryCatch(plot_genero_div("C"), error = function(e) NULL))
 ```
 
+# D · Participación comunitaria en salud mental {orientation="rows"}
+
+## {.sidebar width="320px" .scrollable}
+
+**Registro distinto, no una subsección del A19b.** Esta sección usa el REM **A06**
+(programa de salud mental, sección C.1), no el A19b. Capta el trabajo comunitario del
+programa de salud mental: organizaciones comunitarias de base, de usuarios y familiares,
+grupos de autoayuda, y la coordinación intersectorial. Se presenta junto a A, B y C, pero
+su instrumento y su universo son propios (sobre todo establecimientos con programa de
+salud mental), así que sus cifras no son directamente comparables con las del A19b. La
+distinción entre participación comunitaria y coordinación intersectorial sigue la
+literatura (ver `EVALUACION_A06.md`).
+
+Valor de fondo: el A06 revela participación comunitaria que el A19b no ve.
+
+## Row {height="20%"}
+
+```{r}
+#| content: valuebox
+#| title: "Cobertura A06 comunitaria (% de la red)"
+ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+k <- ga06("kpis_a06")
+list(icon = "people", color = "primary",
+     value = if (!is.null(k)) paste0(k[indicador == "cobertura_a06_c1_comunitaria_pct", valor][1], "%") else "s/d")
+```
+
+```{r}
+#| content: valuebox
+#| title: "Participación que el A19b no ve"
+ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+rv <- ga06("revela")
+list(icon = "eye-slash", color = "secondary",
+     value = if (!is.null(rv)) paste0(rv[indicador == "de_ellos_con_A06_comunitaria", valor][1], " estab.") else "s/d")
+```
+
+## Row {.tabset}
+
+```{r}
+#| title: "Por tipo: A06 comunitaria vs A19b participación social"
+ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+res_d_tipo <- tryCatch({
+  pt <- ga06("cobertura_por_tipo"); rev <- ga06("revela")
+  if (is.null(pt) || is.null(rev)) stop("falta")
+  pt <- pt[n >= 20][order(-cob_a06_com_pct)][seq_len(min(8, .N))]
+  m <- melt(pt[, .(tipo, `A06 comunitaria (salud mental)` = cob_a06_com_pct,
+                   `A19b participación social` = cob_a19_B_pct)],
+            id.vars = "tipo", variable.name = "registro", value.name = "cob")
+  g <- ggplot(m, aes(x = reorder(tipo, cob), y = cob, fill = registro,
+        text = paste0(tipo, ", ", registro, ": ", cob, "%"))) +
+    geom_col(position = "dodge") + coord_flip() +
+    scale_y_continuous(labels = function(x) paste0(x, "%")) +
+    scale_fill_manual(values = c("#1b7837", "#a6dba0"), name = NULL) +
+    labs(x = NULL, y = "Cobertura (%)",
+         subtitle = sprintf("De %s establecimientos sin participación social A19b, %s sí hacen trabajo comunitario en salud mental",
+                            rev[indicador == "estab_sin_participacion_social_A19b", valor][1],
+                            rev[indicador == "de_ellos_con_A06_comunitaria", valor][1])) +
+    tg + theme(legend.position = "bottom")
+  interactivo(g)
+}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre R/12_a06_salud_mental.R para ver la sección A06.</div>"))
+res_d_tipo
+```
+
+```{r}
+#| title: "Tipo de actividad: participación vs coordinación"
+ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+res_d_clase <- tryCatch({
+  cl <- ga06("clase_a06"); if (is.null(cl)) stop("falta")
+  g <- ggplot(cl, aes(x = reorder(clase, establecimientos), y = establecimientos, fill = clase,
+        text = paste0(clase, ": ", establecimientos, " establecimientos"))) +
+    geom_col() + coord_flip() +
+    scale_fill_manual(values = c("Participacion comunitaria" = "#1b7837",
+                                 "Coordinacion intersectorial" = "#9ecae1"), guide = "none") +
+    labs(x = NULL, y = "Establecimientos que registran") +
+    tg
+  interactivo(g)
+}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre R/12_a06_salud_mental.R (clase_a06.csv).</div>"))
+res_d_clase
+```
+
+```{r}
+#| title: "Relación con el A19b"
+ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
+res_d_solape <- tryCatch({
+  sp <- ga06("solape_a19b_a06"); if (is.null(sp)) stop("falta")
+  sp[, `Participación social A19b` := ifelse(a19_B, "Sí", "No")]
+  sp[, `Trabajo comunitario A06` := ifelse(a06_com, "Sí", "No")]
+  tab <- dcast(sp, `Participación social A19b` ~ `Trabajo comunitario A06`, value.var = "N", fill = 0)
+  if (requireNamespace("DT", quietly = TRUE))
+    DT::datatable(tab, rownames = FALSE,
+      options = list(dom = "t", ordering = FALSE), class = "stripe compact",
+      caption = "Establecimientos por registro A19b (participación social) y A06 (trabajo comunitario en salud mental).")
+  else knitr::kable(tab)
+}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre R/12_a06_salud_mental.R.</div>"))
+res_d_solape
+```
+
 # Síntesis {orientation="rows"}
 ## {.sidebar width="320px" .scrollable}
 
@@ -1224,33 +1320,6 @@ res_desc <- tryCatch({
   else knitr::kable(tab)
 }, error = function(e) htmltools::HTML("Corre el pipeline."))
 res_desc
-```
-
-```{r}
-#| title: "Participación invisible: salud mental (A06)"
-ga06 <- function(name){ f <- file.path("productos","a06",paste0(name,".csv")); if (file.exists(f)) data.table::fread(f, sep=";", encoding="UTF-8") else NULL }
-res_a06 <- tryCatch({
-  rev <- ga06("revela"); pt <- ga06("cobertura_por_tipo")
-  if (is.null(rev) || is.null(pt)) stop("falta")
-  pt <- pt[n >= 20]; pt[, brecha := cob_a06_com_pct - cob_a19_B_pct]
-  top <- pt[order(-brecha)][seq_len(min(6, .N))]
-  m <- melt(top[, .(tipo, `A06 comunitaria (salud mental)` = cob_a06_com_pct,
-                    `A19b participacion social` = cob_a19_B_pct)],
-            id.vars = "tipo", variable.name = "registro", value.name = "cob")
-  nrev <- rev[indicador == "de_ellos_con_A06_comunitaria", valor][1]
-  ntot <- rev[indicador == "estab_sin_participacion_social_A19b", valor][1]
-  g <- ggplot(m, aes(x = reorder(tipo, cob), y = cob, fill = registro,
-        text = paste0(tipo, ", ", registro, ": ", cob, "%"))) +
-    geom_col(position = "dodge") + coord_flip() +
-    scale_y_continuous(labels = function(x) paste0(x, "%")) +
-    scale_fill_manual(values = c("#2c7fb8", "#9ecae1"), name = NULL) +
-    labs(x = NULL, y = "Cobertura (%)",
-         subtitle = sprintf("De %s establecimientos sin participacion social A19b, %s si hacen trabajo comunitario en salud mental (A06 C.1)",
-                            ntot, nrev)) +
-    tg + theme(legend.position = "bottom")
-  interactivo(g)
-}, error = function(e) htmltools::HTML("<div style='padding:1rem'>Corre R/12_a06_salud_mental.R para ver el analisis complementario A06 (relacion entre dos registros, no redefine el constructo).</div>"))
-res_a06
 ```
 
 # 2026 en curso {orientation="rows"}
